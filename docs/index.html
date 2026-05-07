@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Plugram — Custom Telegram Client with Plugin System" />
+  <meta property="og:title" content="Plugram" />
+  <meta property="og:description" content="Custom Telegram client with Liquid Glass UI, plugin system in .plugram language, PWA support, and 30+ built-in plugins." />
+  <meta name="theme-color" content="#0f0f1a" />
+  <title>Plugram — Custom Telegram Client</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: #0f0f1a;
+      color: #fff;
+      overflow-x: hidden;
+      min-height: 100vh;
+    }
+    body::before {
+      content: '';
+      position: fixed;
+      top: -50%; left: -50%;
+      width: 200%; height: 200%;
+      background:
+        radial-gradient(ellipse at 20% 40%, rgba(124,92,252,0.1) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 60%, rgba(46,213,115,0.06) 0%, transparent 50%),
+        radial-gradient(ellipse at 40% 80%, rgba(124,92,252,0.08) 0%, transparent 50%);
+      animation: liquid 25s ease-in-out infinite;
+      pointer-events: none;
+      z-index: 0;
+    }
+    @keyframes liquid {
+      0%, 100% { transform: translate(0,0) rotate(0deg); }
+      33% { transform: translate(1.5%,-1%) rotate(0.5deg); }
+      66% { transform: translate(-1%,1.5%) rotate(-0.5deg); }
+    }
+    .container {
+      position: relative;
+      z-index: 1;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 40px 24px;
+    }
+
+    /* glass */
+    .glass {
+      background: rgba(255,255,255,0.04);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 20px;
+    }
+
+    /* hero */
+    .hero {
+      text-align: center;
+      padding: 80px 24px 60px;
+    }
+    .hero-icon {
+      font-size: 72px;
+      margin-bottom: 16px;
+      display: block;
+    }
+    .hero h1 {
+      font-size: clamp(40px, 8vw, 72px);
+      font-weight: 800;
+      background: linear-gradient(135deg, #9d7cff, #b794f4, #7c5cfc);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      line-height: 1.1;
+      margin-bottom: 16px;
+    }
+    .hero p {
+      font-size: clamp(16px, 2.5vw, 20px);
+      color: rgba(255,255,255,0.6);
+      max-width: 600px;
+      margin: 0 auto 32px;
+      line-height: 1.6;
+    }
+
+    .btn {
+      display: inline-block;
+      padding: 16px 36px;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.3s;
+      border: none;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #7c5cfc, #6c3cfc);
+      color: #fff;
+      margin: 0 8px;
+    }
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 40px rgba(124,92,252,0.35);
+    }
+    .btn-ghost {
+      background: rgba(255,255,255,0.06);
+      color: rgba(255,255,255,0.8);
+      border: 1px solid rgba(255,255,255,0.1);
+      margin: 0 8px;
+    }
+    .btn-ghost:hover {
+      background: rgba(255,255,255,0.1);
+      transform: translateY(-2px);
+    }
+    .btn-group { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+
+    /* sections */
+    .section {
+      padding: 60px 0;
+    }
+    .section-title {
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 32px;
+      text-align: center;
+    }
+
+    /* features grid */
+    .features {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px;
+    }
+    .feature-card {
+      padding: 28px 24px;
+      transition: all 0.3s;
+    }
+    .feature-card:hover {
+      background: rgba(255,255,255,0.06);
+      transform: translateY(-4px);
+    }
+    .feature-icon { font-size: 36px; margin-bottom: 12px; display: block; }
+    .feature-title { font-size: 18px; font-weight: 600; margin-bottom: 8px; }
+    .feature-desc { font-size: 14px; color: rgba(255,255,255,0.5); line-height: 1.6; }
+
+    /* plugins */
+    .plugin-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 12px;
+    }
+    .plugin-card {
+      padding: 20px;
+      text-align: center;
+      transition: all 0.3s;
+    }
+    .plugin-card:hover {
+      background: rgba(255,255,255,0.06);
+      transform: translateY(-2px);
+    }
+    .plugin-icon { font-size: 32px; display: block; margin-bottom: 8px; }
+    .plugin-name { font-size: 13px; font-weight: 500; }
+
+    /* install */
+    .install-box {
+      padding: 32px;
+      max-width: 640px;
+      margin: 0 auto;
+    }
+    .install-box code {
+      display: block;
+      padding: 16px 20px;
+      background: rgba(0,0,0,0.3);
+      border-radius: 10px;
+      font-size: 14px;
+      color: #9d7cff;
+      margin: 12px 0;
+      overflow-x: auto;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .install-box p {
+      font-size: 14px;
+      color: rgba(255,255,255,0.5);
+      line-height: 1.7;
+      margin-bottom: 8px;
+    }
+
+    /* footer */
+    .footer {
+      text-align: center;
+      padding: 40px 0;
+      font-size: 13px;
+      color: rgba(255,255,255,0.3);
+    }
+    .footer a { color: rgba(255,255,255,0.5); text-decoration: none; }
+    .footer a:hover { color: #9d7cff; }
+
+    @media (max-width: 640px) {
+      .container { padding: 20px 16px; }
+      .hero { padding: 40px 16px 32px; }
+      .btn { width: 100%; margin: 4px 0 !important; text-align: center; }
+      .features { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="hero">
+      <span class="hero-icon">⚡</span>
+      <h1>Plugram</h1>
+      <p>Custom Telegram client with Liquid Glass UI, plugin system in <strong>.plugram</strong> language, and 30+ built-in plugins.</p>
+      <div class="btn-group">
+        <a href="https://github.com/bitplugg/plugram" class="btn btn-primary">📦 Download</a>
+        <a href="https://github.com/bitplugg/plugram-plugin" class="btn btn-ghost">🔌 Plugins</a>
+        <a href="https://github.com/bitplugg/plugram#readme" class="btn btn-ghost">📖 Docs</a>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2 class="section-title">Features</h2>
+      <div class="features">
+        <div class="feature-card glass">
+          <span class="feature-icon">🎨</span>
+          <div class="feature-title">Liquid Glass UI</div>
+          <div class="feature-desc">Glassmorphism design with fluid animations and dark theme. PWA — install on your phone as a native app.</div>
+        </div>
+        <div class="feature-card glass">
+          <span class="feature-icon">🧩</span>
+          <div class="feature-title">Plugin System</div>
+          <div class="feature-desc">Write plugins in <strong>.plugram</strong> — a custom scripting language. Hook into messages, commands, and events.</div>
+        </div>
+        <div class="feature-card glass">
+          <span class="feature-icon">👻</span>
+          <div class="feature-title">Ghost Mode</div>
+          <div class="feature-desc">Read messages without being seen. Disable read receipts and stay invisible while reading chats.</div>
+        </div>
+        <div class="feature-card glass">
+          <span class="feature-icon">🎤</span>
+          <div class="feature-title">Voice Messages</div>
+          <div class="feature-desc">Record and send voice messages directly from your browser. Built-in microphone recorder.</div>
+        </div>
+        <div class="feature-card glass">
+          <span class="feature-icon">👥</span>
+          <div class="feature-title">Multi Account</div>
+          <div class="feature-desc">Switch between multiple Telegram accounts. Each session stored separately with full encryption.</div>
+        </div>
+        <div class="feature-card glass">
+          <span class="feature-icon">🎯</span>
+          <div class="feature-title">Ghost Commands</div>
+          <div class="feature-desc">Typing indicators, online statuses, sent/read confirmation, pinned messages, and full message search.</div>
+        </div>
+        <div class="feature-card glass">
+          <span class="feature-icon">🎭</span>
+          <div class="feature-title">Custom Themes</div>
+          <div class="feature-desc">Dark/Light themes with custom accent colors. Design your own Liquid Glass theme with CSS variables.</div>
+        </div>
+        <div class="feature-card glass">
+          <span class="feature-icon">📦</span>
+          <div class="feature-title">30+ Plugins</div>
+          <div class="feature-desc">Auto-reply, spam guard, word filter, reminders, polls, keyword alerts, translator, and many more — all in .plugram.</div>
+        </div>
+        <div class="feature-card glass">
+          <span class="feature-icon">🔗</span>
+          <div class="feature-title">Plugin Store</div>
+          <div class="feature-desc">Browse and install community plugins from <strong>bitplugg/plugram-plugin</strong> directly from the settings panel.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2 class="section-title">Built-in Plugins</h2>
+      <div class="plugin-grid">
+        <div class="plugin-card glass"><span class="plugin-icon">🧩</span><div class="plugin-name">Pluglib Core</div></div>
+        <div class="plugin-card glass"><span class="plugin-icon">🤖</span><div class="plugin-name">Auto Reply</div></div>
+        <div class="plugin-card glass"><span class="plugin-icon">📨</span><div class="plugin-name">Auto Forward</div></div>
+        <div class="plugin-card glass"><span class="plugin-icon">🛡️</span><div class="plugin-name">Word Guard</div></div>
+        <div class="plugin-card glass"><span class="plugin-icon">🚫</span><div class="plugin-name">Spam Guard</div></div>
+        <div class="plugin-card glass"><span class="plugin-icon">👋</span><div class="plugin-name">Welcome Mate</div></div>
+        <div class="plugin-card glass"><span class="plugin-icon">🎯</span><div class="plugin-name">Sticker Reply</div></div>
+        <div class="plugin-card glass"><span class="plugin-icon">🌊</span><div class="plugin-name">Anti Flood</div></div>
+        <div class="plugin-card glass"><span class="plugin-icon">🔊</span><div class="plugin-name">Echo Bot</div></div>
+        <div class="plugin-card glass"><span class="plugin-icon">⏰</span><div class="plugin-name">Reminder</div></div>
+        <div class="plugin-card glass"><span class="plugin-icon">📊</span><div class="plugin-name">Stats Tracker</div></div>
+        <div class="plugin-card glass"><span class="plugin-icon">❤️</span><div class="plugin-name">Auto React</div></div>
+        <div class="plugin-card glass"><span class="plugin-icon">🔢</span><div class="plugin-name">Msg Counter</div></div>
+        <div class="plugin-card glass"><span class="plugin-icon">⚡</span><div class="plugin-name">Quick Commands</div></div>
+        <div class="plugin-card glass"><span class="plugin-icon">⛔</span><div class="plugin-name">Blacklist</div></div>
+        <div class="plugin-card glass"><span class="plugin-icon">🔔</span><div class="plugin-name">Keyword Alert</div></div>
+        <div class="plugin-card glass"><span class="plugin-icon">👋</span><div class="plugin-name">Goodbye</div></div>
+        <div class="plugin-card glass"><span class="plugin-icon">📊</span><div class="plugin-name">Poll Maker</div></div>
+        <div class="plugin-card glass"><span class="plugin-icon">#️⃣</span><div class="plugin-name">Hashtag Logger</div></div>
+        <div class="plugin-card glass"><span class="plugin-icon">🗑️</span><div class="plugin-name">Auto Clean</div></div>
+        <div class="plugin-card glass"><span class="plugin-icon">✅</span><div class="plugin-name">Whitelist</div></div>
+        <div class="plugin-card glass"><span class="plugin-icon">📅</span><div class="plugin-name">Schedule</div></div>
+        <div class="plugin-card glass"><span class="plugin-icon">🌐</span><div class="plugin-name">Translate</div></div>
+        <div class="plugin-card glass"><span class="plugin-icon">🔘</span><div class="plugin-name">Inline Buttons</div></div>
+        <div class="plugin-card glass"><span class="plugin-icon">💾</span><div class="plugin-name">Media Saver</div></div>
+        <div class="plugin-card glass"><span class="plugin-icon">🎭</span><div class="plugin-name">Fun Text</div></div>
+        <div class="plugin-card glass"><span class="plugin-icon">🟢</span><div class="plugin-name">Status Keeper</div></div>
+        <div class="plugin-card glass"><span class="plugin-icon">💬</span><div class="plugin-name">PM Auto Reply</div></div>
+        <div class="plugin-card glass"><span class="plugin-icon">🔗</span><div class="plugin-name">Link Preview</div></div>
+        <div class="plugin-card glass"><span class="plugin-icon">📝</span><div class="plugin-name">Chat Logger</div></div>
+        <div class="plugin-card glass"><span class="plugin-icon">📢</span><div class="plugin-name">Mention Notifier</div></div>
+        <div class="plugin-card glass"><span class="plugin-icon">🤫</span><div class="plugin-name">Whisper</div></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2 class="section-title">Installation</h2>
+      <div class="install-box glass">
+        <p><strong>1. Clone the repo</strong></p>
+        <code>git clone https://github.com/bitplugg/plugram.git<br>cd plugram</code>
+        <p><strong>2. Install & run server</strong></p>
+        <code>cd server && npm install && npm start</code>
+        <p><strong>3. Install & run client</strong></p>
+        <code>cd client && npm install && npm start</code>
+        <p style="margin-top: 16px;">Open <strong>http://localhost:3000</strong> and enter your Telegram API credentials from <a href="https://my.telegram.org" style="color:#9d7cff;">my.telegram.org</a></p>
+        <p style="margin-top: 12px;"><strong>Plugins:</strong> Clone <a href="https://github.com/bitplugg/plugram-plugin" style="color:#9d7cff;">bitplugg/plugram-plugin</a> into the <code>plugins/</code> folder, or browse the store from Settings.</p>
+      </div>
+    </div>
+
+    <div class="footer">
+      <p>Made by <a href="https://github.com/bitplugg">bitplugg</a> &middot; TG API 12.7 &middot; <a href="https://github.com/bitplugg/plugram">GitHub</a> &middot; <a href="https://github.com/bitplugg/plugram-plugin">Plugin Repo</a></p>
+    </div>
+  </div>
+</body>
+</html>

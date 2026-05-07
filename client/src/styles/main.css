@@ -13,6 +13,17 @@
   --text-muted: rgba(255, 255, 255, 0.35);
   --danger: #ff4757;
   --success: #2ed573;
+}
+
+[data-theme="light"] {
+  --bg-primary: #f0f0f8;
+  --bg-secondary: #e8e8f0;
+  --glass-bg: rgba(255, 255, 255, 0.6);
+  --glass-border: rgba(0, 0, 0, 0.08);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+  --text-primary: #1a1a2e;
+  --text-secondary: rgba(26, 26, 46, 0.6);
+  --text-muted: rgba(26, 26, 46, 0.35);
   --warning: #ffa502;
   --sidebar-width: 320px;
   --header-height: 60px;

@@ -8,36 +8,36 @@ const { setupHandlers } = require('./handlers');
 let client = null;
 let sessionString = null;
 let currentUser = null;
+let ghostMode = false;
 
 function getClient() { return client; }
 function getCurrentUser() { return currentUser; }
+function isGhostMode() { return ghostMode; }
+function setGhostMode(v) { ghostMode = v; }
 
 async function startClient(sessionStr, apiId, apiHash) {
   const stringSession = new StringSession(sessionStr || '');
   client = new TelegramClient(stringSession, Number(apiId), apiHash, {
-    connectionRetries: 5,
-    useWSS: true,
+    connectionRetries: 5, useWSS: true,
   });
-
   await client.start({
     phoneNumber: async () => { throw new Error('Phone required'); },
     password: async () => { throw new Error('Password required'); },
     phoneCode: async () => { throw new Error('Code required'); },
     onError: (err) => console.error('Auth error:', err),
   });
-
   const saved = client.session.save();
   sessionString = saved;
   const me = await client.getMe();
   currentUser = me;
-
   const existing = db.prepare('SELECT id FROM sessions WHERE user_id = ?').get(String(me.id));
   if (existing) {
     db.prepare('UPDATE sessions SET session_string = ? WHERE user_id = ?').run(saved, String(me.id));
   } else {
     db.prepare('INSERT INTO sessions (user_id, session_string) VALUES (?, ?)').run(String(me.id), saved);
   }
-
+  const gRow = db.prepare("SELECT value FROM settings WHERE key = 'ghost_mode'").get();
+  if (gRow) ghostMode = gRow.value === 'true';
   await setupHandlers();
   return me;
 }
@@ -53,10 +53,7 @@ async function connectWithSession(userId) {
 
 async function sendCode(phone, apiId, apiHash) {
   const stringSession = new StringSession('');
-  client = new TelegramClient(stringSession, Number(apiId), apiHash, {
-    connectionRetries: 5,
-    useWSS: true,
-  });
+  client = new TelegramClient(stringSession, Number(apiId), apiHash, { connectionRetries: 5, useWSS: true });
   await client.connect();
   const result = await client.sendCode({ apiId: Number(apiId), apiHash }, phone);
   sessionString = client.session.save();
@@ -66,9 +63,7 @@ async function sendCode(phone, apiId, apiHash) {
 async function signIn(phone, code, phoneCodeHash) {
   if (!client) throw new Error('Client not initialized');
   try {
-    await client.invoke(new Api.auth.SignIn({
-      phoneNumber: phone, phoneCode: code, phoneCodeHash,
-    }));
+    await client.invoke(new Api.auth.SignIn({ phoneNumber: phone, phoneCode: code, phoneCodeHash }));
   } catch (e) {
     if (e.errorMessage === 'SESSION_PASSWORD_NEEDED') return { need2fa: true };
     throw e;
@@ -106,14 +101,11 @@ async function getDialogs() {
   if (!client) throw new Error('Client not initialized');
   const result = await client.getDialogs({});
   return result.map(d => ({
-    id: String(d.id),
-    type: d.isUser ? 'user' : d.isGroup ? 'group' : d.isChannel ? 'channel' : 'user',
-    title: d.name || '',
-    username: d.username || '',
-    unreadCount: d.unreadCount || 0,
-    lastMessage: d.message?.message || '',
-    lastMessageDate: d.message?.date || null,
-    photo: '',
+    id: String(d.id), type: d.isUser ? 'user' : d.isGroup ? 'group' : d.isChannel ? 'channel' : 'user',
+    title: d.name || '', username: d.username || '', unreadCount: d.unreadCount || 0,
+    lastMessage: d.message?.message || '', lastMessageDate: d.message?.date || null, photo: '',
+    pinned: d.pinned ? 1 : 0,
+    online: null,
   }));
 }
 
@@ -131,14 +123,8 @@ async function getMessages(dialogId, limit = 50, offsetId = 0) {
         else if (attr?.className === 'DocumentAttributeVideo') mediaType = 'video';
         else if (m.media.document?.mimeType?.startsWith('image')) mediaType = 'photo';
         else mediaType = 'file';
-        mediaData = JSON.stringify({
-          id: m.media.document?.id, size: m.media.document?.size,
-          mime: m.media.document?.mimeType, fileName: attr?.fileName || 'file',
-        });
-      } else if (m.media.className === 'MessageMediaSticker') {
-        mediaType = 'sticker';
-        mediaData = JSON.stringify({ emoji: m.media.alt || '' });
-      }
+        mediaData = JSON.stringify({ id: m.media.document?.id, size: m.media.document?.size, mime: m.media.document?.mimeType, fileName: attr?.fileName || 'file' });
+      } else if (m.media.className === 'MessageMediaSticker') { mediaType = 'sticker'; mediaData = JSON.stringify({ emoji: m.media.alt || '' }); }
     }
     return {
       id: m.id, dialogId, fromId: String(m.senderId || ''), text: m.message || '',
@@ -150,11 +136,15 @@ async function getMessages(dialogId, limit = 50, offsetId = 0) {
 
 async function sendMessage(dialogId, text, replyTo = null) {
   if (!client) throw new Error('Client not initialized');
+  if (!ghostMode) {
+    await sendTyping(dialogId, 'typing');
+  }
   const peer = await client.getEntity(Number(dialogId));
   const hookCtx = { dialogId, text, replyTo, cancelled: false };
   await plugramRuntime.runHook('onSend', hookCtx);
   if (hookCtx.cancelled) return null;
-  return client.sendMessage(peer, { message: hookCtx.text, replyTo: hookCtx.replyTo });
+  const result = await client.sendMessage(peer, { message: hookCtx.text, replyTo: hookCtx.replyTo });
+  return result;
 }
 
 async function sendMedia(dialogId, filePath, replyTo = null) {
@@ -184,11 +174,19 @@ async function getContacts() {
   }));
 }
 
-async function searchMessages(query) {
+async function searchMessages(query, dialogId = null) {
   if (!client) throw new Error('Client not initialized');
+  if (dialogId) {
+    const peer = await client.getEntity(Number(dialogId));
+    const result = await client.getMessages(peer, { search: query, limit: 50 });
+    return (result || []).map(m => ({
+      id: m.id, text: m.message || '', date: m.date, dialogId, fromId: String(m.senderId || ''),
+    }));
+  }
   const result = await client.searchMessages(query, { limit: 50 });
   return (result.messages || []).map(m => ({
     id: m.id, text: m.message || '', date: m.date, dialogId: String(m.peerId?.userId || m.peerId?.channelId || ''),
+    fromId: String(m.senderId || ''),
   }));
 }
 
@@ -199,7 +197,7 @@ async function resolveUsername(username) {
 }
 
 async function markAsRead(dialogId, maxId) {
-  if (!client) throw new Error('Client not initialized');
+  if (!client || ghostMode) return;
   const peer = await client.getEntity(Number(dialogId));
   await client.invoke(new Api.messages.ReadHistory({ peer, maxId: maxId || 0 }));
 }
@@ -209,23 +207,45 @@ async function downloadMedia(message, outputPath) {
   return client.downloadMedia(message, { outputFile: outputPath });
 }
 
+async function sendTyping(dialogId, action = 'typing') {
+  if (!client || ghostMode) return;
+  const peer = await client.getEntity(Number(dialogId));
+  let act;
+  if (action === 'typing') act = new Api.SendMessageTypingAction();
+  else if (action === 'record') act = new Api.SendMessageRecordAudioAction();
+  else if (action === 'upload') act = new Api.SendMessageUploadAudioAction();
+  else act = new Api.SendMessageTypingAction();
+  try {
+    await client.invoke(new Api.messages.SetTyping({ peer, action: act }));
+  } catch {}
+}
+
 async function setOnline(online = true) {
-  if (!client) throw new Error('Client not initialized');
+  if (!client) return;
+  if (ghostMode && online) return;
   try {
     await client.invoke(new Api.account.UpdateStatus({ offline: !online }));
   } catch {}
 }
 
+async function getSessions() {
+  return db.prepare('SELECT user_id, created_at FROM sessions ORDER BY created_at DESC').all();
+}
+
+async function removeSession(userId) {
+  db.prepare('DELETE FROM sessions WHERE user_id = ?').run(userId);
+}
+
 async function logout() {
-  if (!client) throw new Error('Client not initialized');
+  if (!client) return;
   try { await client.invoke(new Api.auth.LogOut()); } catch {}
   client = null; currentUser = null; sessionString = null;
 }
 
 module.exports = {
-  getClient, getCurrentUser, startClient, connectWithSession,
-  sendCode, signIn, signInWith2fa, getDialogs, getMessages,
-  sendMessage, sendMedia, deleteMessages, editMessage,
+  getClient, getCurrentUser, isGhostMode, setGhostMode,
+  startClient, connectWithSession, sendCode, signIn, signInWith2fa,
+  getDialogs, getMessages, sendMessage, sendMedia, deleteMessages, editMessage,
   getContacts, searchMessages, resolveUsername, markAsRead,
-  downloadMedia, setOnline, logout,
+  downloadMedia, sendTyping, setOnline, getSessions, removeSession, logout,
 };

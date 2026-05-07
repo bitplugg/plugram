@@ -17,6 +17,8 @@ export const auth = {
   signIn: (code) => request('/auth/sign-in', { method: 'POST', body: JSON.stringify({ code }) }),
   twoFA: (password) => request('/auth/2fa', { method: 'POST', body: JSON.stringify({ password }) }),
   logout: () => request('/auth/logout', { method: 'POST' }),
+  sessions: () => request('/auth/sessions'),
+  removeSession: (userId) => request(`/auth/sessions/${userId}`, { method: 'DELETE' }),
 };
 
 export const dialogs = {
@@ -28,9 +30,13 @@ export const dialogs = {
 
 export const messages = {
   list: (dialogId, limit = 50, offsetId = 0) => request(`/messages/${dialogId}?limit=${limit}&offsetId=${offsetId}`),
+  search: (dialogId, q) => request(`/messages/search/${dialogId}?q=${encodeURIComponent(q)}`),
+  searchGlobal: (q) => request(`/messages/search/global?q=${encodeURIComponent(q)}`),
   send: (dialogId, text, replyTo) => request('/messages/send', { method: 'POST', body: JSON.stringify({ dialogId, text, replyTo }) }),
   edit: (dialogId, messageId, text) => request('/messages/edit', { method: 'POST', body: JSON.stringify({ dialogId, messageId, text }) }),
   delete: (dialogId, messageIds) => request('/messages/delete', { method: 'POST', body: JSON.stringify({ dialogId, messageIds }) }),
+  typing: (dialogId, action) => request('/messages/typing', { method: 'POST', body: JSON.stringify({ dialogId, action }) }),
+  read: (dialogId, maxId) => request(`/messages/read/${dialogId}`, { method: 'POST', body: JSON.stringify({ maxId }) }),
 };
 
 export const contacts = {
@@ -44,6 +50,11 @@ export const media = {
     fd.append('dialogId', dialogId);
     if (replyTo) fd.append('replyTo', replyTo);
     return fetch(`${API}/api/media/send`, { method: 'POST', body: fd }).then(r => r.json());
+  },
+  upload: (file) => {
+    const fd = new FormData();
+    fd.append('file', file);
+    return fetch(`${API}/api/media/upload`, { method: 'POST', body: fd }).then(r => r.json());
   },
 };
 

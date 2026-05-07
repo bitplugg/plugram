@@ -7,9 +7,7 @@ router.get('/', async (req, res) => {
   try {
     const dialogs = await tgClient.getDialogs();
     res.json(dialogs);
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 router.get('/search', async (req, res) => {
@@ -18,9 +16,7 @@ router.get('/search', async (req, res) => {
     if (!q) return res.status(400).json({ error: 'Query required' });
     const results = await tgClient.searchMessages(q);
     res.json(results);
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 router.get('/resolve', async (req, res) => {
@@ -28,10 +24,8 @@ router.get('/resolve', async (req, res) => {
     const { username } = req.query;
     if (!username) return res.status(400).json({ error: 'Username required' });
     const entity = await tgClient.resolveUsername(username);
-    res.json({ id: entity.id, username: entity.username, title: entity.title || `${entity.firstName || ''} ${entity.lastName || ''}` });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
+    res.json(entity);
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 router.post('/read', async (req, res) => {
@@ -39,9 +33,7 @@ router.post('/read', async (req, res) => {
     const { dialogId, maxId } = req.body;
     await tgClient.markAsRead(dialogId, maxId);
     res.json({ success: true });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 router.get('/folders', async (req, res) => {

@@ -1,5 +1,4 @@
 let broadcast = null;
-
 function setBroadcast(fn) { broadcast = fn; }
 
 async function setupHandlers() {
@@ -27,24 +26,14 @@ async function setupHandlers() {
           isGroup: msg.peerId?.className === 'PeerChat',
           isChannel: msg.peerId?.className === 'PeerChannel',
         };
-
         if (broadcast) broadcast('new_message', messageData);
-
-        await plugramRuntime.runHook('onMessage', {
-          text, fromId: messageData.fromId, chatId: dialogId,
-          messageId: msg.id, date: msg.date, isPrivate: messageData.isPrivate,
-          isGroup: messageData.isGroup, isChannel: messageData.isChannel,
-          mediaType: null, replyTo: messageData.replyTo,
-        });
-
+        await plugramRuntime.runHook('onMessage', messageData);
         if (text.startsWith('/')) {
           const parts = text.split(' ');
           await plugramRuntime.runCommand(parts[0].substring(1).toLowerCase(), parts.slice(1), messageData);
         }
       }
-    } catch (e) {
-      console.error('[Handler] Error:', e.message);
-    }
+    } catch (e) { console.error('[Handler] Msg:', e.message); }
   });
 
   client.addEventHandler(async (event) => {
@@ -53,11 +42,30 @@ async function setupHandlers() {
         broadcast('user_status', {
           userId: String(event.userId),
           online: event.status?.className === 'UserStatusOnline',
+          lastSeen: event.status?.wasOnline || null,
         });
       }
-    } catch (e) {
-      console.error('[Handler] Status error:', e.message);
-    }
+    } catch (e) { console.error('[Handler] Status:', e.message); }
+  });
+
+  client.addEventHandler(async (event) => {
+    try {
+      if (event.className === 'UpdateUserTyping' && broadcast) {
+        broadcast('typing', {
+          userId: String(event.userId),
+          chatId: String(event.chatId || event.userId || ''),
+          action: event.action?.className || 'typing',
+        });
+      }
+    } catch (e) { console.error('[Handler] Typing:', e.message); }
+  });
+
+  client.addEventHandler(async (event) => {
+    try {
+      if (event.className === 'UpdateMessageID' && broadcast) {
+        broadcast('message_id', { oldId: event.id, newId: event.randomId });
+      }
+    } catch (e) { console.error('[Handler] MsgID:', e.message); }
   });
 }
 
