@@ -26,6 +26,7 @@ export const dialogs = {
   search: (q) => request(`/dialogs/search?q=${encodeURIComponent(q)}`),
   resolve: (username) => request(`/dialogs/resolve?username=${encodeURIComponent(username)}`),
   read: (dialogId, maxId) => request('/dialogs/read', { method: 'POST', body: JSON.stringify({ dialogId, maxId }) }),
+  pin: (dialogId, pin) => request('/dialogs/pin', { method: 'POST', body: JSON.stringify({ dialogId, pin }) }),
 };
 
 export const messages = {
@@ -33,10 +34,16 @@ export const messages = {
   search: (dialogId, q) => request(`/messages/search/${dialogId}?q=${encodeURIComponent(q)}`),
   searchGlobal: (q) => request(`/messages/search/global?q=${encodeURIComponent(q)}`),
   send: (dialogId, text, replyTo) => request('/messages/send', { method: 'POST', body: JSON.stringify({ dialogId, text, replyTo }) }),
+  forward: (dialogId, fromDialogId, messageIds) => request('/messages/forward', { method: 'POST', body: JSON.stringify({ dialogId, fromDialogId, messageIds }) }),
   edit: (dialogId, messageId, text) => request('/messages/edit', { method: 'POST', body: JSON.stringify({ dialogId, messageId, text }) }),
   delete: (dialogId, messageIds) => request('/messages/delete', { method: 'POST', body: JSON.stringify({ dialogId, messageIds }) }),
   typing: (dialogId, action) => request('/messages/typing', { method: 'POST', body: JSON.stringify({ dialogId, action }) }),
   read: (dialogId, maxId) => request(`/messages/read/${dialogId}`, { method: 'POST', body: JSON.stringify({ maxId }) }),
+  pinned: (dialogId) => request(`/messages/pinned/${dialogId}`),
+};
+
+export const users = {
+  get: (userId) => request(`/users/${userId}`),
 };
 
 export const contacts = {
@@ -46,14 +53,12 @@ export const contacts = {
 export const media = {
   send: (dialogId, file, replyTo) => {
     const fd = new FormData();
-    fd.append('file', file);
-    fd.append('dialogId', dialogId);
+    fd.append('file', file); fd.append('dialogId', dialogId);
     if (replyTo) fd.append('replyTo', replyTo);
     return fetch(`${API}/api/media/send`, { method: 'POST', body: fd }).then(r => r.json());
   },
   upload: (file) => {
-    const fd = new FormData();
-    fd.append('file', file);
+    const fd = new FormData(); fd.append('file', file);
     return fetch(`${API}/api/media/upload`, { method: 'POST', body: fd }).then(r => r.json());
   },
 };
@@ -64,6 +69,10 @@ export const plugins = {
   setConfig: (id, config) => request('/plugins/config', { method: 'POST', body: JSON.stringify({ id, config }) }),
   reload: () => request('/plugins/reload', { method: 'POST' }),
   remove: (id) => request(`/plugins/${id}`, { method: 'DELETE' }),
+  bundle: (filename) => request(`/plugins/bundle/${filename}`),
+  docs: () => request('/plugins/docs'),
+  checkUpdates: () => request('/plugins/check-updates'),
+  install: (url, filename) => request('/plugins/install', { method: 'POST', body: JSON.stringify({ url, filename }) }),
 };
 
 export const settings = {

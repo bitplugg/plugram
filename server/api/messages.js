@@ -40,6 +40,15 @@ router.post('/send', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+router.post('/forward', async (req, res) => {
+  try {
+    const { dialogId, fromDialogId, messageIds } = req.body;
+    if (!dialogId || !fromDialogId || !messageIds) return res.status(400).json({ error: 'Missing params' });
+    await tgClient.forwardMessage(dialogId, fromDialogId, messageIds);
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 router.post('/edit', async (req, res) => {
   try {
     const { dialogId, messageId, text } = req.body;
@@ -59,8 +68,17 @@ router.post('/delete', async (req, res) => {
 router.post('/typing', async (req, res) => {
   try {
     const { dialogId, action } = req.body;
+    if (!dialogId) return res.status(400).json({ error: 'dialogId required' });
     await tgClient.sendTyping(dialogId, action || 'typing');
     res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+router.get('/pinned/:dialogId', async (req, res) => {
+  try {
+    const { dialogId } = req.params;
+    const pinned = await tgClient.getPinnedMessages(dialogId);
+    res.json(pinned);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 

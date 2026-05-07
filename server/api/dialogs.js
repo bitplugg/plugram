@@ -36,6 +36,14 @@ router.post('/read', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+router.post('/pin', async (req, res) => {
+  try {
+    const { dialogId, pin } = req.body;
+    await tgClient.pinDialog(dialogId, pin !== false);
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 router.get('/folders', async (req, res) => {
   try {
     const folders = await tgClient.getChatFolders();

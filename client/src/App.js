@@ -11,12 +11,16 @@ export default function App() {
     Promise.all([
       me().catch(() => null),
       settings.getKey('theme').catch(() => ({ value: 'dark' })),
-      settings.getKey('ghost_mode').catch(() => ({ value: 'false' })),
     ]).then(([u, themeRow]) => {
       setUser(u);
-      const theme = themeRow?.value || 'dark';
-      document.documentElement.setAttribute('data-theme', theme);
+      document.documentElement.setAttribute('data-theme', themeRow?.value || 'dark');
     }).catch(() => {}).finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
   }, []);
 
   if (loading) return <div className="app"><div className="loading"><div className="spinner" /></div></div>;

@@ -11,6 +11,7 @@ const messagesRoute = require('./api/messages');
 const contactsRoute = require('./api/contacts');
 const pluginsRoute = require('./api/plugins');
 const mediaRoute = require('./api/media');
+const usersRoute = require('./api/users');
 const settingsRoute = require('./api/settings');
 const tgClient = require('./telegram/client');
 const tgHandlers = require('./telegram/handlers');
@@ -36,6 +37,7 @@ app.use('/api/messages', messagesRoute);
 app.use('/api/contacts', contactsRoute);
 app.use('/api/plugins', pluginsRoute);
 app.use('/api/media', mediaRoute);
+app.use('/api/users', usersRoute);
 app.use('/api/settings', settingsRoute);
 
 app.get('/api/me', async (req, res) => {

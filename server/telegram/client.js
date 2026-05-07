@@ -236,6 +236,47 @@ async function removeSession(userId) {
   db.prepare('DELETE FROM sessions WHERE user_id = ?').run(userId);
 }
 
+async function forwardMessage(dialogId, fromDialogId, messageIds) {
+  if (!client) throw new Error('Client not initialized');
+  const fromPeer = await client.getEntity(Number(fromDialogId));
+  const toPeer = await client.getEntity(Number(dialogId));
+  const result = await client.forwardMessages(toPeer, { messages: messageIds, fromPeer });
+  return result;
+}
+
+async function pinDialog(dialogId, pin = true) {
+  if (!client) throw new Error('Client not initialized');
+  const peer = await client.getEntity(Number(dialogId));
+  await client.invoke(new Api.messages.ToggleDialogPin({ peer, pinned: pin }));
+}
+
+async function getUserInfo(userId) {
+  if (!client) throw new Error('Client not initialized');
+  const users = await client.getUsers([Number(userId)]);
+  if (!users || users.length === 0) return null;
+  const u = users[0];
+  return {
+    id: String(u.id), firstName: u.firstName || '', lastName: u.lastName || '',
+    username: u.username || '', phone: u.phone || '', photo: '',
+    status: u.status?.className || 'offline',
+    lastSeen: u.status?.wasOnline || null,
+    commonChats: u.commonChatsCount || 0,
+  };
+}
+
+async function getPinnedMessages(dialogId) {
+  if (!client) throw new Error('Client not initialized');
+  const peer = await client.getEntity(Number(dialogId));
+  try {
+    const result = await client.invoke(new Api.messages.Search({
+      peer, filter: new Api.InputMessagesFilterPinned(), q: '', limit: 50,
+    }));
+    return (result.messages || []).map(m => ({
+      id: m.id, text: m.message || '', date: m.date, fromId: String(m.senderId || ''),
+    }));
+  } catch { return []; }
+}
+
 async function logout() {
   if (!client) return;
   try { await client.invoke(new Api.auth.LogOut()); } catch {}
@@ -248,4 +289,5 @@ module.exports = {
   getDialogs, getMessages, sendMessage, sendMedia, deleteMessages, editMessage,
   getContacts, searchMessages, resolveUsername, markAsRead,
   downloadMedia, sendTyping, setOnline, getSessions, removeSession, logout,
+  forwardMessage, pinDialog, getUserInfo, getPinnedMessages,
 };
