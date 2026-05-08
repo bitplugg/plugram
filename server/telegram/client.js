@@ -1,6 +1,6 @@
-const { TelegramClient } = require('gramjs');
-const { StringSession } = require('gramjs/sessions');
-const { Api } = require('gramjs');
+const { TelegramClient } = require('telegram');
+const { StringSession } = require('telegram/sessions');
+const { Api } = require('telegram');
 const db = require('../db');
 const plugramRuntime = require('../plugram/runtime');
 const { setupHandlers } = require('./handlers');

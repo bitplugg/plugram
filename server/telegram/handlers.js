@@ -4,7 +4,7 @@ function setBroadcast(fn) { broadcast = fn; }
 async function setupHandlers() {
   const tgClient = require('./client');
   const plugramRuntime = require('../plugram/runtime');
-  const { Api } = require('gramjs');
+  const { Api } = require('telegram');
   const client = tgClient.getClient();
   if (!client) return;
 
