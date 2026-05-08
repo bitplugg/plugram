@@ -2,13 +2,9 @@ const API = process.env.REACT_APP_API || 'http://localhost:3001';
 
 async function request(path, opts = {}) {
   const res = await fetch(`${API}/api${path}`, {
-    headers: { 'Content-Type': 'application/json', ...opts.headers },
-    ...opts,
+    headers: { 'Content-Type': 'application/json', ...opts.headers }, ...opts,
   });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: res.statusText }));
-    throw new Error(err.error || 'Request failed');
-  }
+  if (!res.ok) { const err = await res.json().catch(() => ({ error: res.statusText })); throw new Error(err.error || 'Request failed'); }
   return res.json();
 }
 
@@ -42,18 +38,24 @@ export const messages = {
   pinned: (dialogId) => request(`/messages/pinned/${dialogId}`),
 };
 
-export const users = {
-  get: (userId) => request(`/users/${userId}`),
+export const actions = {
+  poll: (dialogId, question, options) => request('/actions/poll', { method: 'POST', body: JSON.stringify({ dialogId, question, options }) }),
+  mute: (dialogId, mute) => request('/actions/mute', { method: 'POST', body: JSON.stringify({ dialogId, mute }) }),
+  archive: (dialogId, archive) => request('/actions/archive', { method: 'POST', body: JSON.stringify({ dialogId, archive }) }),
+  block: (userId) => request('/actions/block', { method: 'POST', body: JSON.stringify({ userId }) }),
+  unblock: (userId) => request('/actions/unblock', { method: 'POST', body: JSON.stringify({ userId }) }),
+  groupAdd: (chatId, userId) => request('/actions/group/add', { method: 'POST', body: JSON.stringify({ chatId, userId }) }),
+  groupRemove: (chatId, userId) => request('/actions/group/remove', { method: 'POST', body: JSON.stringify({ chatId, userId }) }),
+  location: (dialogId, lat, lon) => request('/actions/location', { method: 'POST', body: JSON.stringify({ dialogId, lat, lon }) }),
+  saved: () => request('/actions/saved'),
 };
 
-export const contacts = {
-  list: () => request('/contacts'),
-};
+export const users = { get: (userId) => request(`/users/${userId}`) };
+export const contacts = { list: () => request('/contacts') };
 
 export const media = {
   send: (dialogId, file, replyTo) => {
-    const fd = new FormData();
-    fd.append('file', file); fd.append('dialogId', dialogId);
+    const fd = new FormData(); fd.append('file', file); fd.append('dialogId', dialogId);
     if (replyTo) fd.append('replyTo', replyTo);
     return fetch(`${API}/api/media/send`, { method: 'POST', body: fd }).then(r => r.json());
   },

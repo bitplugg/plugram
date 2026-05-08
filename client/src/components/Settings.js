@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { settings as settingsApi, auth, plugins as pluginsApi } from '../api';
 
-function GeneralTab() {
+function GeneralTab({ onFontSizeChange, onDensityChange }) {
   const [apiId, setApiId] = useState('');
   const [apiHash, setApiHash] = useState('');
   const [saved, setSaved] = useState(false);
   const [ghost, setGhost] = useState(false);
   const [theme, setTheme] = useState('dark');
+  const [fontSize, setFontSize] = useState(parseInt(localStorage.getItem('plugram_fontSize') || '14'));
+  const [density, setDensity] = useState(localStorage.getItem('plugram_density') || 'normal');
+  const [animations, setAnimations] = useState(localStorage.getItem('plugram_animations') !== 'off');
 
   useEffect(() => {
     settingsApi.getKey('api_id').then(r => r.value && setApiId(r.value)).catch(() => {});
@@ -24,6 +27,10 @@ function GeneralTab() {
     document.documentElement.setAttribute('data-theme', theme);
     setTimeout(() => setSaved(false), 2000);
   };
+
+  const handleFontSize = (v) => { setFontSize(v); localStorage.setItem('plugram_fontSize', v); onFontSizeChange?.(v); };
+  const handleDensity = (v) => { setDensity(v); localStorage.setItem('plugram_density', v); onDensityChange?.(v); };
+  const handleAnimations = (v) => { setAnimations(v); localStorage.setItem('plugram_animations', v ? 'on' : 'off'); document.documentElement.setAttribute('data-animations', v ? 'on' : 'off'); };
 
   return (
     <div>
@@ -56,6 +63,31 @@ function GeneralTab() {
             onClick={() => setTheme('dark')}>🌙 Dark</button>
           <button className={`btn btn-ghost`} style={{ flex: 1, background: theme === 'light' ? 'rgba(124,92,252,0.2)' : '', borderColor: theme === 'light' ? 'var(--accent)' : '' }}
             onClick={() => setTheme('light')}>☀️ Light</button>
+        </div>
+      </div>
+
+      <div className="settings-group">
+        <div className="settings-group-title">🎨 Customization</div>
+        <div className="settings-row">
+          <span className="settings-label">Font Size</span>
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+            <button className="btn-icon" style={{ fontSize: 11, width: 28, height: 28 }} onClick={() => handleFontSize(Math.max(12, fontSize - 1))}>A−</button>
+            <span style={{ fontSize: 13, width: 30, textAlign: 'center' }}>{fontSize}px</span>
+            <button className="btn-icon" style={{ fontSize: 11, width: 28, height: 28 }} onClick={() => handleFontSize(Math.min(20, fontSize + 1))}>A+</button>
+          </div>
+        </div>
+        <div className="settings-row">
+          <span className="settings-label">Density</span>
+          <div style={{ display: 'flex', gap: 6 }}>
+            {['compact', 'normal', 'spacious'].map(d => (
+              <button key={d} className={`btn btn-ghost`} style={{ padding: '4px 12px', fontSize: 12, background: density === d ? 'rgba(124,92,252,0.2)' : '' }}
+                onClick={() => handleDensity(d)}>{d}</button>
+            ))}
+          </div>
+        </div>
+        <div className="settings-row">
+          <span className="settings-label">Animations</span>
+          <button className={`toggle-switch ${animations ? 'on' : ''}`} onClick={() => handleAnimations(!animations)} />
         </div>
       </div>
 
@@ -251,7 +283,7 @@ function AccountTab({ user, onLogout }) {
   );
 }
 
-export default function Settings({ user, onClose, onLogout, initialTab = 'plugins' }) {
+export default function Settings({ user, onClose, onLogout, initialTab = 'plugins', onFontSizeChange, onDensityChange }) {
   const [tab, setTab] = useState(initialTab);
 
   const tabs = [
@@ -281,7 +313,7 @@ export default function Settings({ user, onClose, onLogout, initialTab = 'plugin
         ))}
       </div>
       <div className="settings-content">
-        {tab === 'general' && <GeneralTab />}
+        {tab === 'general' && <GeneralTab onFontSizeChange={onFontSizeChange} onDensityChange={onDensityChange} />}
         {tab === 'plugins' && <PluginsTab />}
         {tab === 'account' && <AccountTab user={user} onLogout={onLogout} />}
       </div>

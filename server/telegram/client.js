@@ -277,6 +277,82 @@ async function getPinnedMessages(dialogId) {
   } catch { return []; }
 }
 
+async function sendPoll(dialogId, question, options) {
+  if (!client) throw new Error('Client not initialized');
+  const peer = await client.getEntity(Number(dialogId));
+  const result = await client.invoke(new Api.messages.SendMedia({
+    peer, media: new Api.InputMediaPoll({
+      poll: new Api.Poll({
+        id: BigInt(Date.now()),
+        question,
+        answers: options.map((o, i) => new Api.PollAnswer({ text: o, option: Buffer.from([i]) })),
+        publicVoters: false, multiChoice: false,
+      }),
+    }), message: '', randomId: BigInt(Math.floor(Math.random() * 1e16)),
+  }));
+  return result;
+}
+
+async function toggleMute(dialogId, mute) {
+  if (!client) throw new Error('Client not initialized');
+  const peer = await client.getEntity(Number(dialogId));
+  const settings = await client.invoke(new Api.messages.GetPeerSettings({ peer }));
+  const notifySettings = new Api.PeerNotifySettings({
+    showPreviews: mute ? false : true, silent: mute, muteUntil: mute ? 2147483647 : 0,
+  });
+  await client.invoke(new Api.account.UpdateNotifySettings({ peer, settings: notifySettings }));
+}
+
+async function toggleArchive(dialogId, archive) {
+  if (!client) throw new Error('Client not initialized');
+  const peer = await client.getEntity(Number(dialogId));
+  const folderId = archive ? 1 : 0;
+  await client.invoke(new Api.folders.EditPeerFolders({
+    folderPeers: [new Api.InputFolderPeer({ peer, folderId })],
+  }));
+}
+
+async function blockUser(userId) {
+  if (!client) throw new Error('Client not initialized');
+  await client.invoke(new Api.contacts.Block({ id: await client.getEntity(Number(userId)) }));
+}
+
+async function unblockUser(userId) {
+  if (!client) throw new Error('Client not initialized');
+  await client.invoke(new Api.contacts.Unblock({ id: await client.getEntity(Number(userId)) }));
+}
+
+async function addChatMember(chatId, userId) {
+  if (!client) throw new Error('Client not initialized');
+  const peer = await client.getEntity(Number(chatId));
+  const user = await client.getEntity(Number(userId));
+  await client.invoke(new Api.messages.AddChatUser({ chatPeer: peer, userId: user, fwdLimit: 50 }));
+}
+
+async function deleteChatMember(chatId, userId) {
+  if (!client) throw new Error('Client not initialized');
+  const peer = await client.getEntity(Number(chatId));
+  const user = await client.getEntity(Number(userId));
+  await client.invoke(new Api.messages.DeleteChatUser({ chatPeer: peer, userId: user }));
+}
+
+async function sendLocation(dialogId, lat, lon) {
+  if (!client) throw new Error('Client not initialized');
+  const peer = await client.getEntity(Number(dialogId));
+  const result = await client.invoke(new Api.messages.SendMedia({
+    peer, media: new Api.InputMediaGeoPoint({
+      geoPoint: new Api.GeoPoint({ lat, lon, accessHash: BigInt(0) }),
+    }), message: '', randomId: BigInt(Math.floor(Math.random() * 1e16)),
+  }));
+  return result;
+}
+
+async function getSavedMessages() {
+  if (!client) throw new Error('Client not initialized');
+  const me = await client.getMe();
+  return { id: String(me.id), title: 'Saved Messages', type: 'saved' };
+}
+
 async function logout() {
   if (!client) return;
   try { await client.invoke(new Api.auth.LogOut()); } catch {}
@@ -290,4 +366,6 @@ module.exports = {
   getContacts, searchMessages, resolveUsername, markAsRead,
   downloadMedia, sendTyping, setOnline, getSessions, removeSession, logout,
   forwardMessage, pinDialog, getUserInfo, getPinnedMessages,
+  sendPoll, toggleMute, toggleArchive, blockUser, unblockUser,
+  addChatMember, deleteChatMember, sendLocation, getSavedMessages,
 };
