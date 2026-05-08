@@ -103,3 +103,18 @@ server.listen(PORT, async () => {
     }
   }
 });
+
+// Scheduled message sender
+setInterval(async () => {
+  try {
+    const pending = db.prepare(`SELECT * FROM scheduled_messages WHERE status = 'pending' AND schedule_at <= ?`).all(Math.floor(Date.now() / 1000));
+    for (const msg of pending) {
+      try {
+        await tgClient.sendMessage(msg.dialog_id, msg.text);
+        db.prepare(`UPDATE scheduled_messages SET status = 'sent' WHERE id = ?`).run(msg.id);
+      } catch (e) {
+        db.prepare(`UPDATE scheduled_messages SET status = 'failed', error = ? WHERE id = ?`).run(e.message, msg.id);
+      }
+    }
+  } catch {}
+}, 15000);

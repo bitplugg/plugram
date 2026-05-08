@@ -74,4 +74,30 @@ router.get('/saved', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+router.post('/schedule', async (req, res) => {
+  try {
+    const { dialogId, text, scheduleAt } = req.body;
+    if (!dialogId || !text || !scheduleAt) return res.status(400).json({ error: 'Missing params' });
+    const db = require('../db');
+    db.prepare(`INSERT INTO scheduled_messages (dialog_id, text, schedule_at, status) VALUES (?, ?, ?, 'pending')`).run(String(dialogId), text, scheduleAt);
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+router.get('/schedule', async (req, res) => {
+  try {
+    const db = require('../db');
+    const items = db.prepare(`SELECT * FROM scheduled_messages WHERE status = 'pending' ORDER BY schedule_at ASC`).all();
+    res.json(items);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+router.delete('/schedule/:id', async (req, res) => {
+  try {
+    const db = require('../db');
+    db.prepare(`DELETE FROM scheduled_messages WHERE id = ?`).run(req.params.id);
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 module.exports = router;
