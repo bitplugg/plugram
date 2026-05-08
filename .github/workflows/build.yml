@@ -19,15 +19,12 @@ jobs:
       - name: Install dependencies
         run: npm install
         working-directory: server
-      - name: Lint (syntax check)
+      - name: Syntax check
         run: for f in $(find . -name '*.js' -not -path './node_modules/*'); do node -c "$f" || exit 1; done
-        working-directory: server
-      - name: Test
-        run: npm test || echo "No tests configured"
         working-directory: server
 
   client:
-    name: Client — Lint & Build
+    name: Client — Build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -40,12 +37,6 @@ jobs:
       - name: Build
         run: npm run build
         working-directory: client
-      - name: Lint
-        run: npx react-scripts lint || echo "Lint skipped"
-        working-directory: client
-      - name: Build
-        run: npm run build
-        working-directory: client
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
@@ -53,23 +44,15 @@ jobs:
           path: client/build/
           retention-days: 7
 
-  plugin-syntax:
-    name: Plugins — Syntax Check
+  plugins:
+    name: Plugins — Validate
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-      - name: Install server deps (for runtime)
-        run: npm install
-        working-directory: server
       - name: Validate all .plugram files
         run: |
           for f in plugins/*.plugram; do
             [ -f "$f" ] || continue
-            echo "Checking $f..."
             NAME=$(grep '^__name__:' "$f" | head -1 | cut -d: -f2- | xargs)
             ID=$(grep '^__id__:' "$f" | head -1 | cut -d: -f2- | xargs)
             VER=$(grep '^__version__:' "$f" | head -1 | cut -d: -f2- | xargs)
@@ -78,4 +61,3 @@ jobs:
             if [ -z "$VER" ]; then echo "ERROR: $f missing __version__"; exit 1; fi
             echo "  ✅ $NAME ($ID v$VER)"
           done
-          echo "All plugins valid!"

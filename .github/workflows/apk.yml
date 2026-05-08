@@ -9,7 +9,7 @@ permissions:
   contents: write
 
 jobs:
-  build:
+  apk:
     name: Build Android APK
     runs-on: ubuntu-latest
 
@@ -22,7 +22,7 @@ jobs:
         with:
           node-version: 20
 
-      - name: Setup Java
+      - name: Setup Java 17
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
@@ -31,51 +31,56 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Build React app
+      - name: Restore Android SDK cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.android/cache
+            ~/.gradle/caches
+          key: android-${{ runner.os }}-${{ hashFiles('client/capacitor.config.ts') }}
+
+      - name: Build React PWA
         run: |
           npm install
           npm run build
         working-directory: client
 
-      - name: Install Capacitor
+      - name: Generate Android project (Capacitor)
         run: |
-          npm install -g @capacitor/cli@latest
-          cd client/build
-          npm init -y
-          npm install @capacitor/core @capacitor/android
-
-      - name: Init Capacitor Android project
-        run: |
-          cd client/build
-          npx cap init --webDir . Plugram com.plugram.app --yes
           npx cap add android
-
-      - name: Copy web build to Android
-        run: |
-          cd client/build
           npx cap copy android
+          npx cap sync android
+        working-directory: client
 
-      - name: Build APK (debug)
+      - name: Build debug APK
         run: |
-          cd client/build/android
+          cd android
           chmod +x gradlew
-          ./gradlew assembleDebug
+          ./gradlew assembleDebug --no-daemon
+        working-directory: client
 
-      - name: Rename APK
+      - name: Locate and rename APK
         run: |
-          mv client/build/android/app/build/outputs/apk/debug/app-debug.apk \
-             Plugram-v${{ github.ref_name }}.apk 2>/dev/null || \
-          mv client/build/android/app/build/outputs/apk/debug/app-debug.apk \
-             Plugram-latest.apk 2>/dev/null || true
+          APK=$(find client/android -name "app-debug.apk" 2>/dev/null | head -1)
+          if [ -n "$APK" ]; then
+            TAG="${{ github.ref_name }}"
+            NAME="Plugram-${TAG:-latest}.apk"
+            mv "$APK" "$NAME"
+            echo "✅ APK: $NAME ($(du -h "$NAME" | cut -f1))"
+          else
+            echo "❌ APK not found!"
+            find client/android -name "*.apk" 2>/dev/null || true
+            exit 1
+          fi
 
-      - name: Upload APK as artifact
+      - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: plugram-apk
+          name: plugram-android-apk
           path: Plugram-*.apk
           retention-days: 90
 
-      - name: Upload APK to release
+      - name: Attach APK to Release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
